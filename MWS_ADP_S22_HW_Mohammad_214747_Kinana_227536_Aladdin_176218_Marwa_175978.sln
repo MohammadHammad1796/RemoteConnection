@@ -9,7 +9,31 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 		README.md = README.md
 	EndProjectSection
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RemoteServices", "RemoteServices\RemoteServices.csproj", "{EDEBF215-A2BA-49EE-93FE-00BDB3848E1D}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RemoteServer", "RemoteServer\RemoteServer.csproj", "{C5D5F523-C912-4415-8F7F-795DF41AD172}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RemoteClient", "RemoteClient\RemoteClient.csproj", "{A7AB03FF-4A10-4965-9B96-3F414B273BA5}"
+EndProject
 Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{EDEBF215-A2BA-49EE-93FE-00BDB3848E1D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{EDEBF215-A2BA-49EE-93FE-00BDB3848E1D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{EDEBF215-A2BA-49EE-93FE-00BDB3848E1D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{EDEBF215-A2BA-49EE-93FE-00BDB3848E1D}.Release|Any CPU.Build.0 = Release|Any CPU
+		{C5D5F523-C912-4415-8F7F-795DF41AD172}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C5D5F523-C912-4415-8F7F-795DF41AD172}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C5D5F523-C912-4415-8F7F-795DF41AD172}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C5D5F523-C912-4415-8F7F-795DF41AD172}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A7AB03FF-4A10-4965-9B96-3F414B273BA5}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A7AB03FF-4A10-4965-9B96-3F414B273BA5}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A7AB03FF-4A10-4965-9B96-3F414B273BA5}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A7AB03FF-4A10-4965-9B96-3F414B273BA5}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
 	EndGlobalSection
