@@ -46,5 +46,17 @@ namespace RemoteServer.Properties {
                 this["PortNumber"] = value;
             }
         }
+
+        public void UpdateConnectionString(string connectionString)
+        {
+            ConnectionString = connectionString;
+            Save();
+        }
+
+        public void UpdatePortNumber(int portNumber)
+        {
+            PortNumber = portNumber;
+            Save();
+        }
     }
 }

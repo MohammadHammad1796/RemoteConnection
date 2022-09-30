@@ -5,6 +5,7 @@ using System.Data.SqlClient;
 using System.Runtime.Remoting;
 using System.Runtime.Remoting.Channels;
 using System.Runtime.Remoting.Channels.Tcp;
+using System.Threading.Tasks;
 using System.Windows.Forms;
 using static System.Environment;
 
@@ -43,37 +44,42 @@ namespace RemoteServer
                 SaveConnectionStringBtn.Enable();
         }
 
-        private void SaveConnectionStringBtn_Click(object sender, EventArgs e)
+        private async void SaveConnectionStringBtn_Click(object sender, EventArgs e)
         {
             var connectionString = ConnectionStringTxt.Text.Trim();
             try
             {
-                var connection = new SqlConnection(connectionString);
-                connection.Open();
-                connection.Close();
-                Properties.Settings.Default.ConnectionString = connectionString;
-                Properties.Settings.Default.Save();
-                SaveConnectionStringBtn.Disable();
-                AppendToLog("Connection string updated successfully.");
+                await Task.Run(() =>
+                {
+                    var connection = new SqlConnection(connectionString);
+                    connection.Open();
+                    connection.Close();
+                });
             }
             catch (Exception exception)
             {
-                AppendToLog($"Connection string is not updated dut the following error: {exception.Message}");
+                AppendToLog("Connection string is not updated dut the following error: " +
+                            exception.Message);
+                return;
             }
+
+            Properties.Settings.Default.UpdateConnectionString(connectionString);
+            SaveConnectionStringBtn.Disable();
+            AppendToLog("Connection string updated successfully.");
         }
 
-        private void RunStopServerBtn_Click(object sender, EventArgs e)
+        private async void RunStopServerBtn_Click(object sender, EventArgs e)
         {
             if (_isServerRunning)
-                StopServerAndUpdateUI();
+                await StopServerAndUpdateUIAsync();
             else
-                RunServerAndUpdateUI();
+                await RunServerAndUpdateUIAsync();
         }
 
         // ReSharper disable once InconsistentNaming
-        private void RunServerAndUpdateUI()
+        private async Task RunServerAndUpdateUIAsync()
         {
-            RunServer();
+            await RunServerAsync();
             UrlTxt.Text = $"Sql service url is tcp://localhost:{PortNumber}/SqlService for local host." +
                           NewLine +
                           "If you have public IP replace 'localhost' with it." +
@@ -84,32 +90,37 @@ namespace RemoteServer
             RunStopServerBtn.Text = "Stop server";
         }
 
-        private void RunServer()
+        private async Task RunServerAsync()
         {
-            _sqlService = new SqlService();
-            RemotingServices.Marshal(_sqlService, "SqlService");
-            _tcpServerChannel = new TcpServerChannel(PortNumber);
-            ChannelServices.RegisterChannel(_tcpServerChannel, false);
-            //RemotingConfiguration.RegisterWellKnownServiceType(
-            //    typeof(SqlService), "SqlService", WellKnownObjectMode.SingleCall);
+            await Task.Run(() =>
+            {
+                _sqlService = new SqlService();
+                RemotingServices.Marshal(_sqlService, "SqlService");
+                _tcpServerChannel = new TcpServerChannel(PortNumber);
+                ChannelServices.RegisterChannel(_tcpServerChannel, false);
+            });
+
             _isServerRunning = true;
         }
 
         // ReSharper disable once InconsistentNaming
-        private void StopServerAndUpdateUI()
+        private async Task StopServerAndUpdateUIAsync()
         {
-            StopServer();
+            await StopServerAsync();
             RunStopServerBtn.Text = "Run server";
             AppendToLog($"Server stopped at {DateTime.Now:dd-MM-yyyy hh:mm tt}");
             AppendToLog("-----------------------");
             UrlTxt.Hide();
         }
 
-        private void StopServer()
+        private async Task StopServerAsync()
         {
-            _tcpServerChannel.StopListening(null);
-            ChannelServices.UnregisterChannel(_tcpServerChannel);
-            RemotingServices.Disconnect(_sqlService);
+            await Task.Run(() =>
+            {
+                _tcpServerChannel.StopListening(null);
+                ChannelServices.UnregisterChannel(_tcpServerChannel);
+                RemotingServices.Disconnect(_sqlService);
+            });
             _isServerRunning = false;
         }
 
@@ -126,17 +137,16 @@ namespace RemoteServer
             return _instance;
         }
 
-        private void SavePortBtn_Click(object sender, EventArgs e)
+        private async void SavePortBtn_Click(object sender, EventArgs e)
         {
-            Properties.Settings.Default.PortNumber = int.Parse(PortTxt.Text);
-            Properties.Settings.Default.Save();
+            Properties.Settings.Default.UpdatePortNumber(int.Parse(PortTxt.Text));
             SavePortBtn.Disable();
             AppendToLog("Port number updated successfully.");
             if (!_isServerRunning)
                 return;
 
-            StopServerAndUpdateUI();
-            RunServerAndUpdateUI();
+            await StopServerAndUpdateUIAsync();
+            await RunServerAndUpdateUIAsync();
         }
 
         private void PortTxt_TextChanged(object sender, EventArgs e)

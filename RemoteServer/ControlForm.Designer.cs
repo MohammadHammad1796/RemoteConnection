@@ -29,6 +29,7 @@
         private void InitializeComponent()
         {
             this.components = new System.ComponentModel.Container();
+            System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(ControlForm));
             this.ConnectionStringTxt = new System.Windows.Forms.TextBox();
             this.SaveConnectionStringBtn = new System.Windows.Forms.Button();
             this.RunStopServerBtn = new System.Windows.Forms.Button();
@@ -177,6 +178,7 @@
             this.Controls.Add(this.RemoteGroup);
             this.Controls.Add(this.LogGroup);
             this.Controls.Add(this.ConnectionStringGroup);
+            this.Icon = ((System.Drawing.Icon)(resources.GetObject("$this.Icon")));
             this.MinimumSize = new System.Drawing.Size(578, 388);
             this.Name = "ControlForm";
             this.Text = "Control";

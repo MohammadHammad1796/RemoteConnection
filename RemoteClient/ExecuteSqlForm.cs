@@ -1,9 +1,10 @@
 ﻿using RemoteServices.Models;
 using RemoteServices.Services;
 using System;
-using System.Linq;
 using System.Net.Sockets;
 using System.Runtime.Remoting;
+using System.Runtime.Remoting.Channels;
+using System.Runtime.Remoting.Channels.Tcp;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using static RemoteClient.Messages;
@@ -12,12 +13,22 @@ namespace RemoteClient
 {
     public partial class ExecuteSqlForm : Form
     {
+        private TcpChannel _channel;
         private ISqlService _service;
         private static string ServiceUrl => Properties.Settings.Default.SqlServiceUrl;
 
         public ExecuteSqlForm()
         {
             InitializeComponent();
+        }
+
+        private async void ExecuteSqlForm_Load(object sender, EventArgs e)
+        {
+            UrlTxt.Text = ServiceUrl;
+            _channel = new TcpChannel();
+            ChannelServices.RegisterChannel(_channel, false);
+
+            await ConfigureRemoteServiceAsync();
         }
 
         private void ExecuteSqlForm_Resize(object sender, EventArgs e)
@@ -37,10 +48,14 @@ namespace RemoteClient
 
         private async void ExecuteBtn_Click(object sender, EventArgs e)
         {
+            ExecuteBtn.Enabled = false;
+            Text += "         Please wait............";
             var connectMessage = await ConfigureRemoteServiceAsync();
             if (!string.IsNullOrEmpty(connectMessage))
             {
                 MessageBox.Show(connectMessage, "Connection failed");
+                ExecuteBtn.Enabled = true;
+                Text = "SQL";
                 return;
             }
 
@@ -53,28 +68,36 @@ namespace RemoteClient
                     MessageBox.Show(sqlResult.Message, "Fail");
                     SelectGrid.Columns.Clear();
                     SelectGrid.Visible = false;
-                    //_service = null;
+
+                    ExecuteBtn.Enabled = true;
+                    Text = "SQL";
                     return;
                 }
 
-                if (sqlResult.Rows.Any())
+                if (sqlResult.Table.Rows.Count > 1)
                 {
                     SelectGrid.Columns.Clear();
 
-                    RenderGridView(sqlResult);
+                    SelectGrid.DataSource = sqlResult.Table;
 
                     SelectGrid.Visible = true;
                 }
                 else
+                {
+                    SelectGrid.Visible = false;
                     MessageBox.Show("No rows found", "Executed successfully");
+                }
 
-                //_service = null;
+                ExecuteBtn.Enabled = true;
+                Text = "SQL";
                 return;
             }
 
             MessageBox.Show(await ExecuteCommandAsync(sqlText));
 
             SelectGrid.Visible = false;
+            ExecuteBtn.Enabled = true;
+            Text = "SQL";
         }
 
         private async Task<SqlResult> ExecuteQueryAsync(string sql)
@@ -125,26 +148,6 @@ namespace RemoteClient
                 message = exception.Message;
             }
             return message;
-        }
-
-        private void RenderGridView(SqlResult sqlResult)
-        {
-            var counter = 0;
-            foreach (var column in sqlResult.Columns)
-                SelectGrid.Columns.Add(counter++.ToString(), column);
-            SelectGrid.Rows.Clear();
-            for (var i = 0; i < sqlResult.Rows.Count; i++)
-                SelectGrid.Rows.Add(new object());
-
-            for (var i = 0; i < sqlResult.Rows.Count; i++)
-                for (var j = 0; j < sqlResult.Columns.Count; j++)
-                    SelectGrid.Rows[i].Cells[j].Value = sqlResult.Rows.ElementAt(i).ElementAt(j);
-        }
-
-        private async void ExecuteSqlForm_Load(object sender, EventArgs e)
-        {
-            UrlTxt.Text = ServiceUrl;
-            await ConfigureRemoteServiceAsync();
         }
 
         private void UrlTxt_TextChanged(object sender, EventArgs e)

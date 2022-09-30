@@ -62,17 +62,10 @@ namespace RemoteServer.Services
                 sqlConnection.Open();
                 _activeControlForm.AppendToLog($"Query: {sqlQuery}");
                 var command = new SqlCommand(sqlQuery, sqlConnection);
-                var dataReader = command.ExecuteReader();
-                var columnsCount = dataReader.FieldCount;
-                for (var i = 0; i < columnsCount; i++)
-                    result.Columns.Add(dataReader.GetName(i));
-
-                while (dataReader.Read())
-                {
-                    var values = new object[columnsCount];
-                    dataReader.GetValues(values);
-                    result.Rows.Add(values);
-                }
+                var sqlDataAdapter = new SqlDataAdapter(command);
+                var dataSet = new DataSet();
+                sqlDataAdapter.Fill(dataSet);
+                result.Table = dataSet.Tables[0];
 
                 sqlConnection.Close();
                 result.IsSucceeded = true;
@@ -97,6 +90,11 @@ namespace RemoteServer.Services
             }
             _activeControlForm.AppendToLog("--------------");
             return result;
+        }
+
+        public override object InitializeLifetimeService()
+        {
+            return null;
         }
     }
 }
