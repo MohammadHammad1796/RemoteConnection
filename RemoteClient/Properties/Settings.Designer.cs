@@ -26,12 +26,12 @@ namespace RemoteClient.Properties {
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
         [global::System.Configuration.DefaultSettingValueAttribute("")]
-        public string SqlServiceUrl {
+        public string EmployeesServiceUrl {
             get {
-                return ((string)(this["SqlServiceUrl"]));
+                return ((string)(this["EmployeesServiceUrl"]));
             }
             set {
-                this["SqlServiceUrl"] = value;
+                this["EmployeesServiceUrl"] = value;
             }
         }
     }

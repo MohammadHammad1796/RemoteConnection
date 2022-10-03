@@ -18,7 +18,7 @@ namespace RemoteServer
         private bool _isServerRunning;
         private TcpServerChannel _tcpServerChannel;
         private static ControlForm _instance;
-        private SqlService _sqlService;
+        private EmployeesManagementService _employeesManagementService;
 
         public ControlForm()
         {
@@ -80,7 +80,8 @@ namespace RemoteServer
         private async Task RunServerAndUpdateUIAsync()
         {
             await RunServerAsync();
-            UrlTxt.Text = $"Sql service url is tcp://localhost:{PortNumber}/SqlService for local host." +
+            UrlTxt.Text = $"Sql service url is tcp://localhost:{PortNumber}/EmployeesManagementService for " +
+                          $"local host." +
                           NewLine +
                           "If you have public IP replace 'localhost' with it." +
                           NewLine +
@@ -94,8 +95,8 @@ namespace RemoteServer
         {
             await Task.Run(() =>
             {
-                _sqlService = new SqlService();
-                RemotingServices.Marshal(_sqlService, "SqlService");
+                _employeesManagementService = new EmployeesManagementService();
+                RemotingServices.Marshal(_employeesManagementService, "SqlService");
                 _tcpServerChannel = new TcpServerChannel(PortNumber);
                 ChannelServices.RegisterChannel(_tcpServerChannel, false);
             });
@@ -119,7 +120,7 @@ namespace RemoteServer
             {
                 _tcpServerChannel.StopListening(null);
                 ChannelServices.UnregisterChannel(_tcpServerChannel);
-                RemotingServices.Disconnect(_sqlService);
+                RemotingServices.Disconnect(_employeesManagementService);
             });
             _isServerRunning = false;
         }

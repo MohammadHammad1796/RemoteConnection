@@ -13,7 +13,7 @@ namespace RemoteClient
         {
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
-            Application.Run(new ExecuteSqlForm());
+            Application.Run(new EmployeesManagementForm());
         }
     }
 }

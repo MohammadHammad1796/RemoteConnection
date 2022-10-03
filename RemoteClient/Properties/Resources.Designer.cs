@@ -63,10 +63,20 @@ namespace RemoteClient.Properties {
         /// <summary>
         ///   Looks up a localized resource of type System.Drawing.Icon similar to (Icon).
         /// </summary>
-        internal static System.Drawing.Icon sql {
+        internal static System.Drawing.Icon Employees {
             get {
-                object obj = ResourceManager.GetObject("sql", resourceCulture);
+                object obj = ResourceManager.GetObject("Employees", resourceCulture);
                 return ((System.Drawing.Icon)(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized resource of type System.Drawing.Bitmap.
+        /// </summary>
+        internal static System.Drawing.Bitmap loader {
+            get {
+                object obj = ResourceManager.GetObject("loader", resourceCulture);
+                return ((System.Drawing.Bitmap)(obj));
             }
         }
     }

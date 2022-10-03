@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics;
 using System.Windows.Forms;
 
 namespace RemoteServer
@@ -13,6 +14,12 @@ namespace RemoteServer
         {
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
+            if (Process.GetProcessesByName(Process.GetCurrentProcess().ProcessName).Length > 1)
+            {
+                MessageBox.Show("You can't run this program twice at the same time.", "Warning");
+                return;
+            }
+
             Application.Run(new ControlForm());
         }
     }
