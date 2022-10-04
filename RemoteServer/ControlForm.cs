@@ -80,7 +80,7 @@ namespace RemoteServer
         private async Task RunServerAndUpdateUIAsync()
         {
             await RunServerAsync();
-            UrlTxt.Text = $"Sql service url is tcp://localhost:{PortNumber}/EmployeesManagementService for " +
+            UrlTxt.Text = $"Employees management service url is tcp://localhost:{PortNumber}/EmployeesManagementService for " +
                           $"local host." +
                           NewLine +
                           "If you have public IP replace 'localhost' with it." +
@@ -96,7 +96,7 @@ namespace RemoteServer
             await Task.Run(() =>
             {
                 _employeesManagementService = new EmployeesManagementService();
-                RemotingServices.Marshal(_employeesManagementService, "SqlService");
+                RemotingServices.Marshal(_employeesManagementService, "EmployeesManagementService");
                 _tcpServerChannel = new TcpServerChannel(PortNumber);
                 ChannelServices.RegisterChannel(_tcpServerChannel, false);
             });
