@@ -19,6 +19,7 @@ namespace RemoteClient
         private IEmployeesManagementService _service;
         private Employee _employeeToUpdate;
         private static string ServiceUrl => Properties.Settings.Default.EmployeesServiceUrl;
+        private DataTable _employeesDataTable;
 
         public EmployeesManagementForm()
         {
@@ -27,11 +28,26 @@ namespace RemoteClient
 
         private async void EmployeesManagementForm_Load(object sender, EventArgs e)
         {
+            _employeesDataTable = new DataTable();
+            _employeesDataTable.Columns.AddRange(new[]{
+                new DataColumn("Id"),
+                new DataColumn("First name"),
+                new DataColumn("Last name"),
+                new DataColumn("Age")
+            });
+            EmployeesGridView.DataSource = _employeesDataTable;
+
             UrlTxt.Text = ServiceUrl;
             _channel = new TcpChannel();
             ChannelServices.RegisterChannel(_channel, false);
+            if (!string.IsNullOrWhiteSpace(ServiceUrl))
+            {
+                await ConfigureRemoteServiceAsync();
+                return;
+            }
 
-            await ConfigureRemoteServiceAsync();
+            GetAllButton.Enabled = false;
+            AddButton.Enabled = false;
         }
 
         private void EmployeesManagementForm_Resize(object sender, EventArgs e)
@@ -58,24 +74,25 @@ namespace RemoteClient
             Properties.Settings.Default.Save();
             await ConfigureRemoteServiceAsync();
             SaveUrlBtn.Enabled = false;
+            GetAllButton.Enabled = true;
+            AddButton.Enabled = true;
             MessageBox.Show(UrlUpdated, "Success");
         }
 
-        private async Task<string> ConfigureRemoteServiceAsync()
+        private async Task ConfigureRemoteServiceAsync()
         {
-            var message = string.Empty;
             await Task.Run(() =>
             {
                 try
                 {
-                    _service = (IEmployeesManagementService)Activator.GetObject(typeof(IEmployeesManagementService), ServiceUrl);
+                    _service = (IEmployeesManagementService)Activator
+                        .GetObject(typeof(IEmployeesManagementService), ServiceUrl);
                 }
                 catch (Exception exception)
                 {
-                    message = exception.Message;
+                    MessageBox.Show(exception.Message);
                 }
             });
-            return message;
         }
 
         private void IdTextBox_TextChanged(object sender, EventArgs e)
@@ -85,101 +102,43 @@ namespace RemoteClient
             if (id > minimumId)
             {
                 IdErrorProvider.Clear();
-                EnableGetByIdButton();
+                GetByIdButton.Enabled = true;
                 return;
             }
 
             IdErrorProvider.SetError(IdTextBox,
                 $"The id should be integer and greater than {minimumId}");
-            DisableGetByIdButton();
-        }
-
-        private void DisableGetByIdButton()
-        {
             GetByIdButton.Enabled = false;
+            _employeeToUpdate = null;
         }
 
-        private void FirstNameTextBox_TextChanged(object sender, EventArgs e)
-        {
-            ValidateFirstName();
-        }
-
-        private bool ValidateFirstName()
-        {
-            var firstName = FirstNameTextBox.Text.Trim();
-            const int minimumFirstNameLength = 3;
-            var conditions = firstName.Length >= minimumFirstNameLength;
-            if (conditions)
-                FirstNameErrorProvider.Clear();
-            else
-                FirstNameErrorProvider.SetError(FirstNameTextBox,
-                    $"The first name should be at least {minimumFirstNameLength} characters");
-            return conditions;
-        }
-
-        private void LastNameTextBox_TextChanged(object sender, EventArgs e)
-        {
-            ValidateLastName();
-        }
-
-        private bool ValidateLastName()
-        {
-            var lastName = LastNameTextBox.Text.Trim();
-            const int minimumLastNameLength = 3;
-            var conditions = lastName.Length >= minimumLastNameLength;
-            if (conditions)
-                LastNameErrorProvider.Clear();
-            else
-                LastNameErrorProvider.SetError(LastNameTextBox,
-                    $"The first name should be at least {minimumLastNameLength} characters");
-            return conditions;
-        }
-
-        private void AgeTextBox_TextChanged(object sender, EventArgs e)
-        {
-            ValidateAge();
-        }
-
-        private bool ValidateAge()
-        {
-            int.TryParse(AgeTextBox.Text, out var age);
-            const int minimumAge = 18;
-            const int maximumAge = 65;
-            var conditions = age >= minimumAge && age <= maximumAge;
-            if (conditions)
-                AgeErrorProvider.Clear();
-            else
-                AgeErrorProvider.SetError(AgeTextBox,
-                    $"The age should be integer and between {minimumAge} and {maximumAge}");
-            return conditions;
-        }
-
-        private async void GetAllButton_Click(object sender, EventArgs e)
+        private async void GetByIdButton_Click(object sender, EventArgs e)
         {
             await DisplayLoaderUntilFunctionDone(async () =>
             {
-                var connectMessage = await ConfigureRemoteServiceAsync();
-                if (!string.IsNullOrEmpty(connectMessage))
-                {
-                    MessageBox.Show(connectMessage, "Connection failed");
-                    return;
-                }
-
-                var result = await CallRemoteFunctionAndHandelExceptionsAsync(() => _service.GetAll());
+                var result = await CallRemoteFunctionAndHandelExceptionsAsync(() =>
+                    _service.GetById(int.Parse(IdTextBox.Text)));
                 if (!result.IsSucceeded)
                 {
                     MessageBox.Show(result.Message, "Fail");
                     return;
                 }
 
-                if (result.EmployeesTable.Rows.Count == 0)
-                    MessageBox.Show("No rows found", "Warning");
-                else
-                {
-                    EmployeesGridView.DataSource = result.EmployeesTable;
-                    EmployeesGridView.Visible = true;
-                }
+                _employeeToUpdate = result.Employee;
+                FirstNameTextBox.Text = _employeeToUpdate.FirstName;
+                LastNameTextBox.Text = _employeeToUpdate.LastName;
+                AgeTextBox.Text = _employeeToUpdate.Age.ToString();
+                UpdateButton.Enabled = true;
             });
+        }
+
+        private async Task DisplayLoaderUntilFunctionDone(Func<Task> action)
+        {
+            LoaderPictureBox.Visible = true;
+            Text += "                     Please wait............";
+            await action();
+            LoaderPictureBox.Visible = false;
+            Text = "Employees Management";
         }
 
         private static async Task<TActionResult> CallRemoteFunctionAndHandelExceptionsAsync<TActionResult>
@@ -205,92 +164,81 @@ namespace RemoteClient
             return result;
         }
 
-        private async void GetByIdButton_Click(object sender, EventArgs e)
+        private bool ValidateFirstName()
+        {
+            var firstName = FirstNameTextBox.Text.Trim();
+            const int minimumFirstNameLength = 3;
+            var conditions = firstName.Length >= minimumFirstNameLength;
+            if (conditions)
+                FirstNameErrorProvider.Clear();
+            else
+                FirstNameErrorProvider.SetError(FirstNameTextBox,
+                    $"The first name should be at least {minimumFirstNameLength} characters");
+            return conditions;
+        }
+
+        private void FirstNameTextBox_TextChanged(object sender, EventArgs e)
+        {
+            ValidateFirstName();
+        }
+
+        private bool ValidateLastName()
+        {
+            var lastName = LastNameTextBox.Text.Trim();
+            const int minimumLastNameLength = 3;
+            var conditions = lastName.Length >= minimumLastNameLength;
+            if (conditions)
+                LastNameErrorProvider.Clear();
+            else
+                LastNameErrorProvider.SetError(LastNameTextBox,
+                    $"The first name should be at least {minimumLastNameLength} characters");
+            return conditions;
+        }
+
+        private void LastNameTextBox_TextChanged(object sender, EventArgs e)
+        {
+            ValidateLastName();
+        }
+
+        private bool ValidateAge()
+        {
+            int.TryParse(AgeTextBox.Text, out var age);
+            const int minimumAge = 18;
+            const int maximumAge = 65;
+            var conditions = age >= minimumAge && age <= maximumAge;
+            if (conditions)
+                AgeErrorProvider.Clear();
+            else
+                AgeErrorProvider.SetError(AgeTextBox,
+                    $"The age should be integer and between {minimumAge} and {maximumAge}");
+            return conditions;
+        }
+
+        private void AgeTextBox_TextChanged(object sender, EventArgs e)
+        {
+            ValidateAge();
+        }
+
+        private async void GetAllButton_Click(object sender, EventArgs e)
         {
             await DisplayLoaderUntilFunctionDone(async () =>
             {
-                var connectMessage = await ConfigureRemoteServiceAsync();
-                if (!string.IsNullOrEmpty(connectMessage))
-                {
-                    MessageBox.Show(connectMessage, "Connection failed");
-                    return;
-                }
-
-                var result = await CallRemoteFunctionAndHandelExceptionsAsync(() =>
-                    _service.GetById(int.Parse(IdTextBox.Text)));
+                var result = await CallRemoteFunctionAndHandelExceptionsAsync(() => _service.GetAll());
                 if (!result.IsSucceeded)
                 {
                     MessageBox.Show(result.Message, "Fail");
                     return;
                 }
 
-                _employeeToUpdate = result.Employee;
-                FirstNameTextBox.Text = _employeeToUpdate.FirstName;
-                LastNameTextBox.Text = _employeeToUpdate.LastName;
-                AgeTextBox.Text = _employeeToUpdate.Age.ToString();
+                if (result.EmployeesTable.Rows.Count == 0)
+                    MessageBox.Show("No rows found", "Warning");
+                else
+                {
+                    _employeesDataTable = result.EmployeesTable;
+                    EmployeesGridView.DataSource = result.EmployeesTable;
+                    EmployeesGridView.Visible = true;
+                }
             });
-        }
-
-        private void EnableGetByIdButton()
-        {
-            GetByIdButton.Enabled = true;
-        }
-
-        private async void AddButton_Click(object sender, EventArgs e)
-        {
-            await DisplayLoaderUntilFunctionDone(async () =>
-            {
-                DisableUpdateButton();
-                _employeeToUpdate = null;
-                if (!ValidateAddEmployeeData())
-                    return;
-
-                var connectMessage = await ConfigureRemoteServiceAsync();
-                if (!string.IsNullOrEmpty(connectMessage))
-                {
-                    MessageBox.Show(connectMessage, "Connection failed");
-                    return;
-                }
-
-                var insertEmployee = new InsertEmployee
-                {
-                    FirstName = FirstNameTextBox.Text.Trim(),
-                    LastName = LastNameTextBox.Text.Trim(),
-                    Age = int.Parse(AgeTextBox.Text)
-                };
-                var result = await CallRemoteFunctionAndHandelExceptionsAsync(() =>
-                        _service.Add(insertEmployee));
-                if (!result.IsSucceeded)
-                {
-                    MessageBox.Show(result.Message, "Fail");
-                    return;
-                }
-
-                MessageBox.Show("Employee added.", "Success");
-                var dataTable = EmployeesGridView.DataSource as DataTable;
-                if (EmployeesGridView.ColumnCount == 0)
-                {
-                    dataTable = new DataTable();
-                    dataTable.Columns.AddRange(new[]{
-                        new DataColumn("Id"),
-                        new DataColumn("First name"),
-                        new DataColumn("Last name"),
-                        new DataColumn("Age")
-                    });
-                    EmployeesGridView.DataSource = dataTable;
-                }
-
-                // ReSharper disable once PossibleNullReferenceException
-                dataTable.Rows.Add(result.Id, insertEmployee.FirstName,
-                    insertEmployee.LastName, insertEmployee.Age);
-                EmployeesGridView.Visible = true;
-                ClearInputsAndErrors();
-            });
-        }
-
-        private void DisableUpdateButton()
-        {
-            UpdateButton.Enabled = false;
         }
 
         private bool ValidateAddEmployeeData()
@@ -310,17 +258,43 @@ namespace RemoteClient
             AgeErrorProvider.Clear();
         }
 
+        private async void AddButton_Click(object sender, EventArgs e)
+        {
+            await DisplayLoaderUntilFunctionDone(async () =>
+            {
+                UpdateButton.Enabled = false;
+                _employeeToUpdate = null;
+                if (!ValidateAddEmployeeData())
+                    return;
+
+                var insertEmployee = new InsertEmployee
+                {
+                    FirstName = FirstNameTextBox.Text.Trim(),
+                    LastName = LastNameTextBox.Text.Trim(),
+                    Age = int.Parse(AgeTextBox.Text)
+                };
+                var result = await CallRemoteFunctionAndHandelExceptionsAsync(() =>
+                        _service.Add(insertEmployee));
+                if (!result.IsSucceeded)
+                {
+                    MessageBox.Show(result.Message, "Fail");
+                    return;
+                }
+
+                MessageBox.Show("Employee added.", "Success");
+
+                // ReSharper disable once PossibleNullReferenceException
+                _employeesDataTable.Rows.Add(result.Id, insertEmployee.FirstName,
+                    insertEmployee.LastName, insertEmployee.Age);
+                EmployeesGridView.Visible = true;
+                ClearInputsAndErrors();
+            });
+        }
+
         private async void UpdateButton_Click(object sender, EventArgs e)
         {
             await DisplayLoaderUntilFunctionDone(async () =>
             {
-                var connectMessage = await ConfigureRemoteServiceAsync();
-                if (!string.IsNullOrEmpty(connectMessage))
-                {
-                    MessageBox.Show(connectMessage, "Connection failed");
-                    return;
-                }
-
                 _employeeToUpdate.FirstName = FirstNameTextBox.Text;
                 _employeeToUpdate.LastName = LastNameTextBox.Text;
                 _employeeToUpdate.Age = int.Parse(AgeTextBox.Text);
@@ -334,36 +308,19 @@ namespace RemoteClient
                 }
 
                 MessageBox.Show("Employee updated.", "Success");
-                var dataTable = EmployeesGridView.DataSource as DataTable;
-                if (EmployeesGridView.ColumnCount == 0)
-                {
-                    dataTable = new DataTable();
-                    dataTable.Columns.AddRange(new[]{
-                        new DataColumn("Id"),
-                        new DataColumn("First name"),
-                        new DataColumn("Last name"),
-                        new DataColumn("Age")
-                    });
-                    EmployeesGridView.DataSource = dataTable;
 
-                    dataTable.Rows.Add(_employeeToUpdate.Id, _employeeToUpdate.FirstName,
-                        _employeeToUpdate.LastName, _employeeToUpdate.Age);
+                var row = EmployeesGridView.Rows.Cast<DataGridViewRow>()
+                    .FirstOrDefault(r => int.Parse(r.Cells[0].Value.ToString()) == _employeeToUpdate.Id);
+                if (row != null)
+                {
+                    EmployeesGridView.Rows[row.Index].Cells[1].Value = _employeeToUpdate.FirstName;
+                    EmployeesGridView.Rows[row.Index].Cells[2].Value = _employeeToUpdate.LastName;
+                    EmployeesGridView.Rows[row.Index].Cells[3].Value = _employeeToUpdate.Age;
                 }
                 else
-                {
-                    var row = EmployeesGridView.Rows.Cast<DataGridViewRow>()
-                        .FirstOrDefault(r => int.Parse(r.Cells[0].Value.ToString()) == _employeeToUpdate.Id);
-                    if (row != null)
-                    {
-                        EmployeesGridView.Rows[row.Index].Cells[1].Value = _employeeToUpdate.FirstName;
-                        EmployeesGridView.Rows[row.Index].Cells[2].Value = _employeeToUpdate.LastName;
-                        EmployeesGridView.Rows[row.Index].Cells[3].Value = _employeeToUpdate.Age;
-                    }
-                    else
-                        // ReSharper disable once PossibleNullReferenceException
-                        dataTable.Rows.Add(_employeeToUpdate.Id, _employeeToUpdate.FirstName,
-                            _employeeToUpdate.LastName, _employeeToUpdate.Age);
-                }
+                    // ReSharper disable once PossibleNullReferenceException
+                    _employeesDataTable.Rows.Add(_employeeToUpdate.Id, _employeeToUpdate.FirstName,
+                        _employeeToUpdate.LastName, _employeeToUpdate.Age);
 
                 _employeeToUpdate = null;
                 EmployeesGridView.Visible = true;
@@ -384,12 +341,6 @@ namespace RemoteClient
             await DisplayLoaderUntilFunctionDone(async () =>
             {
                 var employeeId = int.Parse(e.Row.Cells[0].Value.ToString());
-                var connectMessage = await ConfigureRemoteServiceAsync();
-                if (!string.IsNullOrEmpty(connectMessage))
-                {
-                    MessageBox.Show(connectMessage, "Connection failed");
-                    return;
-                }
 
                 var result = await CallRemoteFunctionAndHandelExceptionsAsync(() =>
                     _service.Delete(employeeId));
@@ -402,15 +353,6 @@ namespace RemoteClient
 
                 MessageBox.Show("Employee Deleted.", "Success");
             });
-        }
-
-        private async Task DisplayLoaderUntilFunctionDone(Func<Task> action)
-        {
-            LoaderPictureBox.Visible = true;
-            Text += "                     Please wait............";
-            await Task.Run(action);
-            LoaderPictureBox.Visible = false;
-            Text = "Employees Management";
         }
     }
 }

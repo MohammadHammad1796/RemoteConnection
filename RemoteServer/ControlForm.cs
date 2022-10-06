@@ -68,88 +68,6 @@ namespace RemoteServer
             AppendToLog("Connection string updated successfully.");
         }
 
-        private async void RunStopServerBtn_Click(object sender, EventArgs e)
-        {
-            if (_isServerRunning)
-                await StopServerAndUpdateUIAsync();
-            else
-                await RunServerAndUpdateUIAsync();
-        }
-
-        // ReSharper disable once InconsistentNaming
-        private async Task RunServerAndUpdateUIAsync()
-        {
-            await RunServerAsync();
-            UrlTxt.Text = $"Employees management service url is tcp://localhost:{PortNumber}/EmployeesManagementService for " +
-                          $"local host." +
-                          NewLine +
-                          "If you have public IP replace 'localhost' with it." +
-                          NewLine +
-                          $"If you have domain replace 'localhost:{PortNumber}' with it.";
-            UrlTxt.Show();
-            AppendToLog($"Server started at {DateTime.Now:dd-MM-yyyy hh:mm tt}");
-            RunStopServerBtn.Text = "Stop server";
-        }
-
-        private async Task RunServerAsync()
-        {
-            await Task.Run(() =>
-            {
-                _employeesManagementService = new EmployeesManagementService();
-                RemotingServices.Marshal(_employeesManagementService, "EmployeesManagementService");
-                _tcpServerChannel = new TcpServerChannel(PortNumber);
-                ChannelServices.RegisterChannel(_tcpServerChannel, false);
-            });
-
-            _isServerRunning = true;
-        }
-
-        // ReSharper disable once InconsistentNaming
-        private async Task StopServerAndUpdateUIAsync()
-        {
-            await StopServerAsync();
-            RunStopServerBtn.Text = "Run server";
-            AppendToLog($"Server stopped at {DateTime.Now:dd-MM-yyyy hh:mm tt}");
-            AppendToLog("-----------------------");
-            UrlTxt.Hide();
-        }
-
-        private async Task StopServerAsync()
-        {
-            await Task.Run(() =>
-            {
-                _tcpServerChannel.StopListening(null);
-                ChannelServices.UnregisterChannel(_tcpServerChannel);
-                RemotingServices.Disconnect(_employeesManagementService);
-            });
-            _isServerRunning = false;
-        }
-
-        public void AppendToLog(string message)
-        {
-            LogTxt.Text += message;
-            LogTxt.Text += NewLine;
-            LogTxt.SelectionStart = LogTxt.TextLength;
-            LogTxt.ScrollToCaret();
-        }
-
-        internal static ControlForm GetInstance()
-        {
-            return _instance;
-        }
-
-        private async void SavePortBtn_Click(object sender, EventArgs e)
-        {
-            Properties.Settings.Default.UpdatePortNumber(int.Parse(PortTxt.Text));
-            SavePortBtn.Disable();
-            AppendToLog("Port number updated successfully.");
-            if (!_isServerRunning)
-                return;
-
-            await StopServerAndUpdateUIAsync();
-            await RunServerAndUpdateUIAsync();
-        }
-
         private void PortTxt_TextChanged(object sender, EventArgs e)
         {
             var portText = PortTxt.Text;
@@ -173,6 +91,26 @@ namespace RemoteServer
             }
         }
 
+        private async void SavePortBtn_Click(object sender, EventArgs e)
+        {
+            Properties.Settings.Default.UpdatePortNumber(int.Parse(PortTxt.Text));
+            SavePortBtn.Disable();
+            AppendToLog("Port number updated successfully.");
+            if (!_isServerRunning)
+                return;
+
+            await StopServerAndUpdateUIAsync();
+            await RunServerAndUpdateUIAsync();
+        }
+
+        public void AppendToLog(string message)
+        {
+            LogTxt.Text += message;
+            LogTxt.Text += NewLine;
+            LogTxt.SelectionStart = LogTxt.TextLength;
+            LogTxt.ScrollToCaret();
+        }
+
         private void ControlForm_Resize(object sender, EventArgs e)
         {
             ConnectionStringGroup.Width = Width - 40;
@@ -183,6 +121,66 @@ namespace RemoteServer
             LogTxt.Width = LogGroup.Width - 21;
             LogGroup.Height = Height - 264;
             LogTxt.Height = LogGroup.Height - 25;
+        }
+
+        private async Task RunServerAsync()
+        {
+            await Task.Run(() =>
+            {
+                _employeesManagementService = new EmployeesManagementService();
+                RemotingServices.Marshal(_employeesManagementService, "EmployeesManagementService");
+                _tcpServerChannel = new TcpServerChannel(PortNumber);
+                ChannelServices.RegisterChannel(_tcpServerChannel, false);
+            });
+
+            _isServerRunning = true;
+        }
+
+        private async Task RunServerAndUpdateUIAsync()
+        {
+            await RunServerAsync();
+            UrlTxt.Text = $"Employees management service url is " +
+                          $"tcp://localhost:{PortNumber}/EmployeesManagementService for local host." +
+                          NewLine +
+                          "If you have public IP replace 'localhost' with it." +
+                          NewLine +
+                          $"If you have domain replace 'localhost:{PortNumber}' with it.";
+            UrlTxt.Show();
+            AppendToLog($"Server started at {DateTime.Now:dd-MM-yyyy hh:mm tt}");
+            RunStopServerBtn.Text = "Stop server";
+        }
+
+        private async Task StopServerAsync()
+        {
+            await Task.Run(() =>
+            {
+                _tcpServerChannel.StopListening(null);
+                ChannelServices.UnregisterChannel(_tcpServerChannel);
+                RemotingServices.Disconnect(_employeesManagementService);
+            });
+            _isServerRunning = false;
+        }
+
+        private async Task StopServerAndUpdateUIAsync()
+        {
+            await StopServerAsync();
+            RunStopServerBtn.Text = "Run server";
+            AppendToLog($"Server stopped at {DateTime.Now:dd-MM-yyyy hh:mm tt}");
+            AppendToLog("-----------------------");
+            UrlTxt.Hide();
+        }
+
+        private async void RunStopServerBtn_Click(object sender, EventArgs e)
+        {
+            if (_isServerRunning)
+                await StopServerAndUpdateUIAsync();
+            else
+                await RunServerAndUpdateUIAsync();
+        }
+
+        internal static ControlForm GetInstance()
+        {
+            return _instance;
         }
     }
 }
