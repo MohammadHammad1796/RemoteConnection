@@ -324,6 +324,7 @@ namespace RemoteClient
 
                 _employeeToUpdate = null;
                 EmployeesGridView.Visible = true;
+                UpdateButton.Enabled = false;
                 ClearInputsAndErrors();
             });
         }
