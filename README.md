@@ -1,5 +1,5 @@
-﻿# Master of web science project in Syrian Virtual University
-# Course ADP
+﻿# Master of web science assignment in Syrian Virtual University
+# Course ADP (Distributed Applications Programming)
 ---
 
 ## What will this application do?
